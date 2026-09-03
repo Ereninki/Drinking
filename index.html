@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drink</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<h1>When You Drink...</h1>
+<div id="buttons">
+    <button type='button' onclick='init()'>Start</button>
+    <button type='button' onclick='stop()'>Stop</button>
+</div>
+<div id="img_and_webcam">
+    <div id='webcam-container'></div>
+    <img id="gif" src="gifs/stop-drinking-how-dare-you.gif">
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.3/dist/teachablemachine-image.min.js"></script>
+
+<script type="text/javascript">
+
+    const URL = 'https://teachablemachine.withgoogle.com/models/lK9RcxjCj/';
+    const gifdoc = document.getElementById("gif");
+    const img_and_webcam_div = document.getElementById("img_and_webcam");
+    let currentgif = "";
+
+    let model, webcam, maxPredictions;
+    
+    async function init() {
+        const modelURL = URL + 'model.json';
+        const metadataURL = URL + 'metadata.json';
+
+        model = await tmImage.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
+
+        const flip = true;
+        const width = 200;
+        const height = 200;
+        webcam = new tmImage.Webcam(width, height, flip);
+        await webcam.setup();
+
+
+        document.getElementById("webcam-container").appendChild(webcam.canvas);
+        webcam.play();
+        img_and_webcam_div.classList.toggle("activate_img_and_webcam")
+        window.requestAnimationFrame(loop);
+    }
+
+    async function stop() {
+        webcam.stop();
+        document.getElementById("webcam-container").removeChild(webcam.canvas);
+        gifdoc.src = "gifs/stop-drinking-how-dare-you.gif";
+        img_and_webcam_div.classList.toggle("activate_img_and_webcam")
+
+    }
+
+    async function loop() {
+        webcam.update();
+        await predict();
+        window.requestAnimationFrame(loop);
+    }
+
+
+    async function predict() {
+        let prediction;
+
+        prediction = await model.predict(webcam.canvas);
+        for (let i = 0; i < maxPredictions; i++) {
+            if (prediction[i].probability.toFixed(2) > 0.8) {
+                let newgif;
+
+                if (prediction[i].className == "not drinking") {
+                    newgif = "gifs/stop-drinking-how-dare-you.gif";
+                } else if (prediction[i].className == "drinking tea") {
+                    newgif = "gifs/tea-good.gif";
+                } else if (prediction[i].className == "drinking fanta") {
+                    newgif = "gifs/drink-fanta.gif"
+                } else {
+                    newgif = "gifs/stop-drinking-how-dare-you.gif";
+                }
+                if (currentgif !== newgif) {
+                    gifdoc.src = newgif;
+                    currentgif = newgif;
+                }
+            }
+        }
+    }
+</script>
+
+</body>
+
+</html>
